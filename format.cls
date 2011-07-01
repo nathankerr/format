@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}[1995/12/01]
-\ProvidesClass{format}[2011/05/04]
+\ProvidesClass{format}[2011/07/01]
 % Growth based on http://en.wikipedia.org/wiki/Preferred_number R10 series
 % one to two alphabets = 18.7pt - 9.35pt
 % basesizes in series: 10pt, 12.59pt, 15.85pt
@@ -84,6 +84,24 @@
 	\ExecuteOptions{13pt}
 }
 
+% Classes of documents; default view is book
+\newif\if@book
+\newif\if@article
+\newif\if@slides
+\DeclareOption{book}{%
+	\@booktrue
+	\ExecuteOptions{twoside}
+}
+\DeclareOption{article}{%
+	\@articletrue
+	\ExecuteOptions{oneside}
+}
+\DeclareOption{slides}{%
+	\@slidestrue
+	\PassOptionsToClass{landscape}{memoir}
+	\ExecuteOptions{a5paper,16pt,oneside}
+}
+
 % Page sidedness
 \DeclareOption{oneside}{%
 	\PassOptionsToClass{oneside}{memoir}
@@ -106,7 +124,7 @@
 	\PassOptionsToClass{showtrims}{memoir}
 }
 
-\ExecuteOptions{16pt,a4paper,twoside,onecolumn}
+\ExecuteOptions{16pt,a4paper,book,onecolumn}
 \ProcessOptions
 \LoadClass[openright]{memoir}
 
@@ -170,57 +188,76 @@
 }
 
 % Page Layout
-%\setbinding{0pt}
-%\setlrmarginsandblock{0.05\paperwidth}{0.05\paperwidth}{*} %edge spine ratio
-%\setulmarginsandblock{\@sizeHuge}{\@sizeHuge}{*} %top bottom ratio
-%\setcolsepandrule{0.025\paperwidth}{0pt} % space_width ruler_width
-%\setheadfoot{\@sizeLarge}{\@sizeLarge} % headheight footskip
-%\setheaderspaces{*}{\baselineskip}{*} % headdrop headsep ratio
+\if@book
+	\setbinding{9mm}
+\else % article, slides
+	\setbinding{-9mm}
+\fi
 
-%\setbinding{0pt}
-%\setlrmarginsandblock{0.05\paperwidth}{0.05\paperwidth}{*} %edge spine ratio
-%\setulmarginsandblock{\@sizeHuge}{\@sizeHuge}{*} %top bottom ratio
-%\setcolsepandrule{0.025\paperwidth}{0pt} % space_width ruler_width
-%\setheadfoot{\@sizeLarge}{\@sizeLarge} % headheight footskip
-%\setheaderspaces{*}{\baselineskip}{*} % headdrop headsep ratio
-
-% GM with 10pt for a5
-%\setlxvchars[\normalsize]
-%\settypeblocksize{*}{\lxvchars}{1.618}
-%\setulmargins{50pt}{*}{1.0}
-%\setlrmargins{*}{*}{1.618}
-
-% 1.26 with 13pt for a5
-\setbinding{9mm}
-\setlxvchars[\normalsize]
-\settypeblocksize{*}{\lxvchars}{1.414}
-\setulmargins{*}{*}{1.414}
-\setlrmargins{*}{*}{1.414}
+\if@slides
+	\setlrmarginsandblock{0pt}{0pt}{*} %edge spine ratio
+	\setlength\spinemargin{0.5\spinemargin} %cut the spine margin to even the left and right margins
+	\setulmarginsandblock{\spinemargin}{\@sizesmall}{*} %top bottom ratio
+	\setheadfoot{0pt}{0pt} % headheight footskip
+	\setheaderspaces{*}{0pt}{*} % headdrop headsep ratio
+\else % book, article
+	\setlxvchars[\normalsize]
+	\settypeblocksize{*}{\lxvchars}{1.414}
+	\setulmargins{*}{*}{1.414}
+	\setlrmargins{*}{*}{1.414}
+\fi
 
 \checkandfixthelayout[lines]
-% \checkthelayout
 
 % Headers and footers
 \nouppercaseheads
 
+\copypagestyle{slide}{headings} %copy orig
+\makeoddhead{slide}{}{}{} %style left center right
+% \makeheadrule{slide}{\textwidth}{\normalrulethickness} %style length thickness
+\makeoddfoot{slide}{\small\thedate}{\small\theauthor}{\small\thepage} %style left center right
+% \makefootrule{slide}{\textwidth}{\normalrulethickness}{0pt} %style length thickness skip
+
+\if@slides
+	\aliaspagestyle{plain}{slide} %alias original
+	\pagestyle{plain}
+\fi
+
 % Title
 \renewcommand\@maketitle{
-	\thispagestyle{empty}
-	\vspace{-\parskip}
-	\@author \hfill \@date
-	\vspace{2pt}
-	\hrule
-	\begin{center}
-		% {
+	\if@article
+		\chapter{\@title}
+	\else \if@slides
+		\thispagestyle{empty}
+		\begin{center}
+			~
+			\vfill
+			\LARGE
+			\@title
+			\vfill
+			\normalsize
+			~
+			\vfill
+			\@author\\
+			\@date
+		\end{center}
+		\clearpage
+	\else % book
+		\thispagestyle{empty}
+		\vspace{-\parskip}
+		\@author \hfill \@date
+		\vspace{2pt}
+		\hrule
+		\begin{center}
 			\vspace{-\parskip}
 			\vspace{2pt}
 			\LARGE
-			\@title	
-		% }
-	\end{center}
+			\@title
+		\end{center}
+	\fi
 }
 
-% Chapter style
+% Chapter styles
 \makechapterstyle{format}{%
 	\renewcommand\chapterheadstart{\vspace{-\parskip}}
 	\renewcommand{\chapnamefont}{\normalsize}
@@ -230,48 +267,80 @@
 	\renewcommand\printchapternonum{\vphantom{\chapnamefont Chapter \chapnumfont 2}\vspace{2pt}}
 	\renewcommand{\printchaptertitle}[1]{%
 		\hrule
-		\vspace{-\parskip}
 		\vspace{2pt}
 		\centering
 		\chaptitlefont
 		##1
 	}
 }
-\chapterstyle{format}
-
-\makechapterstyle{single}{%
+\makechapterstyle{article}{%
 	\chapterstyle{format}
 	\renewcommand\printchaptername{Nathan Kerr}
 	\renewcommand\printchapternum{\hfill \@date}
 	\renewcommand\printchapternonum{Nathan Kerr\hfill \@date}
 }
+\makechapterstyle{slide}{%
+	\chapterstyle{crosshead}
+	\renewcommand{\chapnamefont}{\LARGE}
+	\renewcommand{\chapnumfont}{\LARGE}
+	\renewcommand{\chaptitlefont}{\LARGE}
+}
+
+\if@article
+	\chapterstyle{article}
+\else \if@slides
+	\chapterstyle{slide}
+\else %book
+	\chapterstyle{format}
+\fi
+\fi
 
 % Section style
 \setbeforesecskip{\@sizelarge}
 \setsecindent{0pt}
-\setsecheadstyle{\Large}
+\if@slides
+	\setsecheadstyle{\clearpage\Large}
+\else
+	\setsecheadstyle{\Large}
+\fi
 \setaftersecskip{1pt}
 
 % Subsection style
 \setbeforesubsecskip{\@sizenormal}
 \setsubsecindent{0pt}
-\setsubsecheadstyle{\large}
+\if@slides
+	\setsubsecheadstyle{\clearpage\large}
+\else
+	\setsubsecheadstyle{\large}
+\fi
 \setaftersubsecskip{1pt}
 
 % Subsubsection style
 \setbeforesubsubsecskip{1pt}
 \setsubsecindent{0pt}
-\setsubsubsecheadstyle{\normalsize}
+\if@slides
+	\setsubsubsecheadstyle{\clearpage\normalsize}
+\else
+	\setsubsubsecheadstyle{\normalsize}
+\fi
 \setaftersubsubsecskip{1pt}
 
 % Paragraph style
 \setbeforeparaskip{1pt}
 \setparaindent{0pt}
-\setparaheadstyle{\bfseries}
+\if@slides
+	\setparaheadstyle{\clearpage\bfseries}
+\else
+	\setparaheadstyle{\bfseries}
+\fi
 \setafterparaskip{-1em}
 
 % Subparagraph style
 \setbeforesubparaskip{1pt}
 \setsubparaindent{\parindent}
-\setsubparaheadstyle{\bfseries}
+\if@slides
+	\setsubparaheadstyle{\clearpage\bfseries}
+\else
+	\setsubparaheadstyle{\bfseries}
+\fi
 \setaftersubparaskip{-1em}
